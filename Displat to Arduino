@@ -1,0 +1,81 @@
+#include <SoftwareSerial.h>
+
+const byte rxPin = 16; // rx2
+const byte txPin = 17; // tx2
+
+SoftwareSerial mySerial(rxPin, txPin);
+
+unsigned char incomingData[100];
+
+unsigned char Temperature[8] = {0x5a, 0xa5, 0x05, 0x82, 0x20, 0x00, 0x00, 0x00};
+unsigned char Amsuyu[8] = {0x5a, 0xa5, 0x05, 0x82, 0x17, 0x00, 0x00, 0x00};
+
+bool sicaklikPrinted = false;
+bool akisPrinted = false;
+
+void setup() {
+  pinMode(25,OUTPUT);
+  Serial.begin(115200);
+  Serial.println("DwinTest");
+
+  mySerial.begin(115200);
+  delay(500);
+}
+
+void loop() {
+  resetPrintFlags(); // Her iterasyon başında kontrol değişkenlerini sıfırla
+  readSerialData();
+  Sicaklik(incomingData);
+  Akis(incomingData);
+  delay(100);
+}
+
+void resetPrintFlags() {
+  sicaklikPrinted = false;
+  akisPrinted = false;
+}
+
+void readSerialData() {
+  if (mySerial.available() > 0) {
+    int i = 0;
+    while (mySerial.available() > 0) {
+      char incomingByte = mySerial.read();
+      delay(2);
+      incomingData[i] = incomingByte;
+      i++;
+    }
+  }
+}
+
+void Sicaklik(unsigned char data[]) {
+  if (!sicaklikPrinted && data[4] == (byte)0x20) {
+    // VP adresi 2000 olan butonun verileri
+    unsigned int receivedInt = (data[7] << 8) | data[8];
+    Serial.print("Sicaklik : ");
+    Serial.println(receivedInt);
+    if(receivedInt == 50){
+      Serial.print("Role Kapandi");
+      kapatRole();
+    }else{
+          digitalWrite(25, LOW);  // 25. pindeki röleyi kapat
+
+    }
+
+    sicaklikPrinted = true; // Bir kere yazdırıldı, bir daha yazdırma
+  }
+}
+
+void Akis(unsigned char data[]) {
+  if (!akisPrinted && data[4] == (byte)0x17) {
+    // VP adresi 2000 olan butonun verileri
+    unsigned int receivedInt = (data[7] << 8) | data[8];
+    Serial.print("Akis Miktari : ");
+    Serial.println(receivedInt);
+
+    akisPrinted = true; // Bir kere yazdırıldı, bir daha yazdırma
+  }
+}
+
+void kapatRole(){
+    digitalWrite(25, HIGH);  // 25. pindeki röleyi kapat
+}
