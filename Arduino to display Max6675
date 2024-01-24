@@ -1,0 +1,98 @@
+#include <Wire.h> 
+#include <SoftwareSerial.h>
+#include <SPI.h>
+
+#define MAX6675_CS   14
+#define MAX6675_SO   12
+#define MAX6675_SCK  27
+
+const byte rxPin = 16; //rx2
+const byte txPin = 17; //tx2
+SoftwareSerial mySerial(rxPin, txPin);
+
+unsigned char Buffer[9];
+#define temperature_add   0x15 
+#define bismillah   0x16 
+unsigned char Temperature[8] = {0x5a, 0xa5, 0x05, 0x82, temperature_add , 0x00, 0x00, 0x00};
+unsigned char ALLAH[8] = {0x5a, 0xa5, 0x05, 0x82, bismillah , 0x00, 0x00, 0x00};
+
+float temp;
+int receivedTestEkranValue = 0;
+
+int hedefTemp = 45;
+
+void setup() {
+  Serial.begin(115200);
+  mySerial.begin(115200);
+  pinMode(MAX6675_CS, OUTPUT);
+  pinMode(MAX6675_SO, INPUT);
+  pinMode(MAX6675_SCK, OUTPUT);
+  digitalWrite(MAX6675_CS, HIGH); // Ensure CS is high initially
+}
+
+void loop() {
+  temp = readThermocouple(); 
+  Serial.print("TEMPERATURE: ");
+  Serial.println(temp, 1);    
+  Data_Arduino_to_Display();
+  PleaseWork();
+  if(hedefTemp == 50){
+    Serial.print("Ahhha");
+  }
+  delay(300);
+}
+
+void Data_Arduino_to_Display() {
+  int t = temp;
+  Temperature[6] = highByte(t);
+  Temperature[7] = lowByte(t);
+  mySerial.write(Temperature, 8);
+}
+
+
+
+double readThermocouple() {
+  uint16_t v;
+  digitalWrite(MAX6675_CS, LOW);
+  delay(1);
+
+  // Read in 16 bits
+  v = shiftIn(MAX6675_SO, MAX6675_SCK, MSBFIRST);
+  v <<= 8;
+  v |= shiftIn(MAX6675_SO, MAX6675_SCK, MSBFIRST);
+
+  digitalWrite(MAX6675_CS, HIGH);
+
+  if (v & 0x4) {
+    // Bit 2 indicates if the thermocouple is disconnected
+    return NAN;     
+  }
+
+  // The lower three bits (0,1,2) are discarded status bits
+  v >>= 3;
+
+  // The remaining bits are the number of 0.25 degree (C) counts
+  return v * 0.25;
+}
+
+void PleaseWork(){
+
+ if (mySerial.available())
+  {
+    for (int i = 0; i <= 8; i++) //this loop will store whole frame in buffer array.
+    {
+      Buffer[i] = mySerial.read();
+    }
+    if (Buffer[0] == 0X5A)
+    {
+      switch (Buffer[4])
+      {
+        case 0x16:   //for light
+Serial.print("Tıkladım");        break;
+        default:
+          break;
+      }
+    }
+  }
+
+}
